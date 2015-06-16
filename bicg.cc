@@ -5,7 +5,7 @@
 #include <fstream>
 #include <omp.h>
 
-#define EPS 1.0e-15
+#define EPS 1.0e-25
 
 #define NMAX 5
 
@@ -56,40 +56,61 @@ double in(int n, double *x, double *y){
 }
 
 
-void cg(int n, double *adim, double *bvec, double *xvec){
+void cgbi_stab(int n, double *adim, double *bvec, double *xvec){
   int i, j, k, count = 0;
-   double eps, oldeps, alpha, beta, r, p, pp, rr;
+   double eps, oldeps, r, p, pp, rr;
+   double alpha, beta, omega;
+   double rap;
 
   double *pvec = new double [n]();
   double *rvec = new double [n]();
+  double *r0vec = new double [n]();
   double *apvec = new double [n]();
 
+  double *svec = new double [n]();
+
+  double *asvec = new double [n]();
+
+
   for(i=0; i<n; i++){
-    rvec[i] = bvec[i];
-    pvec[i] = rvec[i];
+    r0vec[i] = bvec[i];
+    rvec[i] = pvec[i] = r0vec[i];
+  }
+
+  rr = in(n, r0vec, r0vec);
+
+  if(rr == 0){
+    exit(1);
   }
 
   while(1){
     oldeps = eps;
     eps = 0.0;
 
-    for(i=0; i<n; i++){
-      apvec[i] = 0;
-      for(j=0; j<n; j++){
-        apvec[i] += adim[i*n+j] * pvec[j];
-      }
-    }
+    //get apvec 
+    map(n, adim, pvec, apvec);
+    rr = in(n, r0vec, rvec);
 
-    for(i=0, r=0, p=0; i<n; i++){
-      r += rvec[i] * rvec[i];
-      p += pvec[i] * apvec[i];
-    }
-    alpha = r / p;
+    rap = in(n, r0vec, apvec);
+
+    alpha = rr / rap;
+
 
     for(i=0; i<n; i++){
-      xvec[i] += alpha * pvec[i];
-      rvec[i] -= alpha * apvec[i];
+      svec[i] = rvec[i] - alpha * apvec[i];
     }
+
+
+    //asvec = As
+    map(n, adim, svec, asvec);
+
+    omega = in(n, asvec, svec) / in(n, asvec, asvec);
+
+    for(i=0; i<n; i++){
+      xvec[i] += alpha * pvec[i] + omega * svec[i];
+      rvec[i] = svec[i] - omega * asvec[i];
+    }
+
 
     // double *bb = new double[n]();
     // map(n, adim, xvec, bb);
@@ -111,14 +132,17 @@ void cg(int n, double *adim, double *bvec, double *xvec){
       break;
     }
 
-    for(i=0, rr=0, pp=0; i<n; i++){ 
-      rr += rvec[i] * rvec[i];
-      pp += pvec[i] * pvec[i];
-    }
-    beta = rr/pp;
+    // for(i=0, rr=0, pp=0; i<n; i++){ 
+    //   rr += rvec[i] * rvec[i];
+    //   pp += pvec[i] * pvec[i];
+    // }
+    // beta = rr/pp;
+
+
+    beta = (alpha / omega) * (in(n, r0vec, rvec) / rr);
 
     for(i=0; i<n; i++){
-      pvec[i] = rvec[i] + beta * pvec[i];
+      pvec[i] = rvec[i] + beta * (pvec[i] - omega * apvec[i]);
     }
     count++;
   }
@@ -164,8 +188,7 @@ int main(int ac, char *av[]){
   printf("\n\n");
   ////////////////////////////////////
 
-  gs2(n, adim, bvec, xvec);
-  //cg(n, adim, bvec, xvec);
+  cgbi_stab(n, adim, bvec, xvec);
 
   for(k=0; k<n; k++){
     printf("xvec[%2d] = %lf\n", k, xvec[k]);
