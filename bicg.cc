@@ -124,6 +124,8 @@ void cgbi_stab(int n, double *adim, double *bvec, double *xvec){
   }
 
   printf("count: %d\n   eps: %e   oldeps: %e\n", count, eps, oldeps);
+
+  //free忘れずに
   free(pvec);free(rvec);free(apvec);free(r0vec);free(svec);free(asvec);
 }
 
