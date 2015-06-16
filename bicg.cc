@@ -58,48 +58,39 @@ double in(int n, double *x, double *y){
 
 void cgbi_stab(int n, double *adim, double *bvec, double *xvec){
   int i, j, k, count = 0;
-   double eps, oldeps, r, p, pp, rr;
-   double alpha, beta, omega;
-   double rap;
+  double eps, rr, rap;
+  double alpha, beta, omega;
 
   double *pvec = new double [n]();
   double *rvec = new double [n]();
   double *r0vec = new double [n]();
   double *apvec = new double [n]();
-
   double *svec = new double [n]();
-
   double *asvec = new double [n]();
-
 
   for(i=0; i<n; i++){
     r0vec[i] = bvec[i];
     rvec[i] = pvec[i] = r0vec[i];
   }
 
-  rr = in(n, r0vec, r0vec);
-
-  if(rr == 0){
-    exit(1);
-  }
-
   while(1){
-    oldeps = eps;
     eps = 0.0;
 
     //get apvec 
     map(n, adim, pvec, apvec);
+
+    //(r0, r)
     rr = in(n, r0vec, rvec);
 
+    //(r0, ap)
     rap = in(n, r0vec, apvec);
 
     alpha = rr / rap;
 
-
+    //svec
     for(i=0; i<n; i++){
       svec[i] = rvec[i] - alpha * apvec[i];
     }
-
 
     //asvec = As
     map(n, adim, svec, asvec);
@@ -111,18 +102,10 @@ void cgbi_stab(int n, double *adim, double *bvec, double *xvec){
       rvec[i] = svec[i] - omega * asvec[i];
     }
 
-
-    // double *bb = new double[n]();
-    // map(n, adim, xvec, bb);
-
-    //eps = residual(n, bvec, bb);
-
     for(i=0; i<n; i++){
       eps += fabs(rvec[i]);
     }
-        
-    //printf("%d %e   \n", count, eps);
-    
+            
     if(eps <= EPS){
       count++;
       break;
@@ -131,13 +114,6 @@ void cgbi_stab(int n, double *adim, double *bvec, double *xvec){
     }else if (isnan(eps)){
       break;
     }
-
-    // for(i=0, rr=0, pp=0; i<n; i++){ 
-    //   rr += rvec[i] * rvec[i];
-    //   pp += pvec[i] * pvec[i];
-    // }
-    // beta = rr/pp;
-
 
     beta = (alpha / omega) * (in(n, r0vec, rvec) / rr);
 
@@ -148,7 +124,7 @@ void cgbi_stab(int n, double *adim, double *bvec, double *xvec){
   }
 
   printf("count: %d\n   eps: %e   oldeps: %e\n", count, eps, oldeps);
-  free(pvec);free(rvec);free(apvec);
+  free(pvec);free(rvec);free(apvec);free(r0vec);free(svec);free(asvec);
 }
 
 int main(int ac, char *av[]){
@@ -170,22 +146,21 @@ int main(int ac, char *av[]){
   readmats(data, n, adim, bvec, xvec);
 
   ////////////////////////////////////
-  for(k=0; k<n; k++){
-    for(j=0; j<n; j++){
-      printf("%e	", adim[k*n+j]);
-    }
-    printf("\n");
-  }
-  printf("\n\nb\n");
-
-  for(j=0; j<n; j++){
-      printf("%lf ", bvec[j]);
-  }
-  printf("\n\nx\n");
-  for(j=0; j<n; j++){
-      printf("%lf ", xvec[j]);
-  }
-  printf("\n\n");
+  // for(k=0; k<n; k++){
+  //   for(j=0; j<n; j++){
+  //     printf("%e	", adim[k*n+j]);
+  //   }
+  //   printf("\n");
+  // }
+  // printf("\n\nb\n");
+  // for(j=0; j<n; j++){
+  //     printf("%lf ", bvec[j]);
+  // }
+  // printf("\n\nx\n");
+  // for(j=0; j<n; j++){
+  //     printf("%lf ", xvec[j]);
+  // }
+  // printf("\n\n");
   ////////////////////////////////////
 
   cgbi_stab(n, adim, bvec, xvec);
