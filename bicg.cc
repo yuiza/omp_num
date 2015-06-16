@@ -28,11 +28,11 @@ void readmats(char *fnm, int &n, double *&a, double *&b, double *&x){
   ifs.close();
 }
 
-void map(int n, double *a, double *x, double *b){
+void map(int n, double *a, double *x, double *y){
   for (int i = 0; i < n; i++){
-    b[i] = 0;
+    y[i] = 0;
     for (int j = 0; j < n; j++){
-      b[i] += a[i*n+j] * x[j];
+      y[i] += a[i*n+j] * x[j];
     }
   }
 }
@@ -45,95 +45,6 @@ double residual(int n, double *x, double *y){
 		res += pow( (x[i]-y[i]), 2);
 	}	
 	return res;
-}
-
-void gs(int n, double *adim, double *bvec, double *xvec){
-  int i, j, k, count = 1;
-  double eps;
-  double old;
-  double *bdash = new double[n]();
-
-  while(1){
-    eps = 0.0;
-  
-    //map(n, adim, bvec, xvec);
-	
-    for(k=0; k<n; k++){
- 	    old = xvec[k];    
-      xvec[k] = bvec[k];
-      for(i=0; i<n; i++){
-        if(i != k)
-          xvec[k] -= adim[k*n+i] * xvec[i];
-      }
-      xvec[k] =  xvec[k] / adim[k*n+k];
-    }
-
-    map(n, adim, xvec, bdash);
-
-
-    eps = residual(n, bvec, bdash);
-    
-    printf("%d %e   \n", count, eps);
-
-    if(eps < EPS){
-      count++;
-      break;
-    // }else if(isinf(eps)){
-    //   puts("Inf");
-    //   break;
-    }else if(isnan(eps)){
-      puts("Nan");
-      break;
-    }
-    count++;
-  }
-}
-
-void gs2(int n, double *adim, double *bvec, double *xvec){
-   int i, j, k, count = 1;
-   double eps, tmp;
-
-   //gauss-s
-   while(1){
-      eps = 0.0;
-      for(k=0; k<n; k++){
-         // count++;
-         tmp = xvec[k];
-         xvec[k] = bvec[k];
-         for(i=0; i<n; i++){
-            if(i != k)
-               xvec[k] -= adim[k*n+i] * xvec[i];
-         }   
-         xvec[k] =  xvec[k] / adim[k*n+k];   
-
-         //εチェック
-         eps += fabs(tmp - xvec[k]);
-      }
-      printf("%d %e   \n", count, eps);
-      if(eps < EPS){
-         count++;
-         // printf("\nEND  %e ", eps);
-         break;
-      }else if(isinf(eps)){
-         printf("\nERROR : eps inf\n");
-         break;
-      }else if(isnan(eps)){
-         printf("\nERROR : eps nan\n");
-         break;
-      }
-      count++;
-   }
-   //printf("%d\n", count);
-}
-
-double residua1(int n, double *r){
-        int i;
-        double res;
-
-        for(i=0; i<n; i++){
-                res += fabs(r[i]);
-        }
-        return res;
 }
 
 double in(int n, double *x, double *y){
@@ -211,42 +122,7 @@ void cg(int n, double *adim, double *bvec, double *xvec){
     }
     count++;
   }
-  // while(1){
-  //   eps = 0.0;
 
-  //   map(n, adim, pvec, apvec);
-  //   double alpha = in(n, rvec,rvec) / in(n, pvec, apvec);
-
-  //   for(i=0; i<n; i++){
-  //     xvec[i] += alpha * pvec[i];
-
-  //     rvec[i] -= alpha * apvec[i];
-  //   }
-
-  //   eps = residua1(n, rvec); 
-    
-  //   oldeps = eps;
-
-  //   //printf("eps: %e\n", oldeps);
-
-  //   if(eps <= EPS){
-  //     count++;
-  //     break;
-  //   }else if(isinf(eps)){
-  //     printf("eps: %e", oldeps);
-  //     break;
-  //   }else if (isnan(eps)){
-  //     printf("eps: %e", oldeps);
-  //     break;
-  //   }
-
-  //   double beta = in(n, rvec, rvec) / in(n, pvec, pvec);
-
-  //   for(i=0; i<n; i++){
-  //     pvec[i] = rvec[i] + beta * pvec[i];
-  //   }
-  //   count++;
-  // }
   printf("count: %d\n   eps: %e   oldeps: %e\n", count, eps, oldeps);
   free(pvec);free(rvec);free(apvec);
 }
