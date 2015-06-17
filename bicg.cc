@@ -44,7 +44,7 @@ double in_product(int n, double *x, double *y){
   return product;
 }
 
-
+//参考サイト：http://www.jicfus.jp/wiki/index.php?Bi-CGSTAB%20%E6%B3%95
 void cgbi_stab(int n, double *adim, double *bvec, double *xvec){
   int i, j, k, count;
   double eps, rr, rap;
