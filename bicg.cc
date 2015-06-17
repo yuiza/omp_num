@@ -6,8 +6,7 @@
 #include <omp.h>
 
 #define EPS 1.0e-25
-
-#define NMAX 5
+#define NMAX 1000000
 
 void readmats(char *fnm, int &n, double *&a, double *&b, double *&x){
   std::ifstream ifs;
@@ -37,17 +36,7 @@ void map(int n, double *a, double *x, double *y){
   }
 }
 
-double residual(int n, double *x, double *y){
-	int i;
-	double res = 0;
-
-	for(i=0; i<n; i++){
-		res += pow( (x[i]-y[i]), 2);
-	}	
-	return res;
-}
-
-double in(int n, double *x, double *y){
+double in_product(int n, double *x, double *y){
   double product = 0;
   for (int i = 0; i < n; i++){
     product += x[i] * y[i];
@@ -57,7 +46,7 @@ double in(int n, double *x, double *y){
 
 
 void cgbi_stab(int n, double *adim, double *bvec, double *xvec){
-  int i, j, k, count = 0;
+  int i, j, k, count;
   double eps, rr, rap;
   double alpha, beta, omega;
 
@@ -73,17 +62,18 @@ void cgbi_stab(int n, double *adim, double *bvec, double *xvec){
     rvec[i] = pvec[i] = r0vec[i];
   }
 
-  while(1){
+  count = 0;
+  while(count < NMAX){
     eps = 0.0;
 
     //get apvec 
     map(n, adim, pvec, apvec);
 
     //(r0, r)
-    rr = in(n, r0vec, rvec);
+    rr = in_product(n, r0vec, rvec);
 
     //(r0, ap)
-    rap = in(n, r0vec, apvec);
+    rap = in_product(n, r0vec, apvec);
 
     alpha = rr / rap;
 
@@ -95,38 +85,63 @@ void cgbi_stab(int n, double *adim, double *bvec, double *xvec){
     //asvec = As
     map(n, adim, svec, asvec);
 
-    omega = in(n, asvec, svec) / in(n, asvec, asvec);
+    omega = in_product(n, asvec, svec) / in_product(n, asvec, asvec);
 
     for(i=0; i<n; i++){
       xvec[i] += alpha * pvec[i] + omega * svec[i];
       rvec[i] = svec[i] - omega * asvec[i];
     }
 
-    for(i=0; i<n; i++){
-      eps += fabs(rvec[i]);
-    }
-            
-    if(eps <= EPS){
+
+    for(i=0; i<n; i++)
+      eps += fabs(rvec[i]);            
+
+    if(eps < EPS){
       count++;
       break;
-    }else if(isinf(eps)){
-      break;
-    }else if (isnan(eps)){
-      break;
     }
+    // else if(isinf(eps)){
+    //   break;
+    // }else if (isnan(eps)){
+    //   break;
+    // }
 
-    beta = (alpha / omega) * (in(n, r0vec, rvec) / rr);
+    beta = (alpha / omega) * (in_product(n, r0vec, rvec) / rr);
 
     for(i=0; i<n; i++){
       pvec[i] = rvec[i] + beta * (pvec[i] - omega * apvec[i]);
     }
+
     count++;
   }
 
-  printf("count: %d\n   eps: %e   oldeps: %e\n", count, eps, oldeps);
+  printf("count: %d\neps: %e\n", count, eps);
 
   //free忘れずに
   free(pvec);free(rvec);free(apvec);free(r0vec);free(svec);free(asvec);
+}
+
+double residual(int n, double *x, double *y){
+  int i;
+  double res = 0;
+
+  for(i=0; i<n; i++){
+    res += pow( (x[i]-y[i]), 2);
+  } 
+  return res;
+}
+
+void check_answer(int n, double *a, double *x, double *b){
+  double *bb = new double [n]();
+  double res;
+
+  map(n, a, x, bb);
+
+  res = residual(n, b, bb);
+
+  printf("res %e\n", res);
+
+  free(bb);
 }
 
 int main(int ac, char *av[]){
@@ -145,31 +160,21 @@ int main(int ac, char *av[]){
 
   printf("%s\n", data);
 
+
+  //read File
   readmats(data, n, adim, bvec, xvec);
 
-  ////////////////////////////////////
-  // for(k=0; k<n; k++){
-  //   for(j=0; j<n; j++){
-  //     printf("%e	", adim[k*n+j]);
-  //   }
-  //   printf("\n");
-  // }
-  // printf("\n\nb\n");
-  // for(j=0; j<n; j++){
-  //     printf("%lf ", bvec[j]);
-  // }
-  // printf("\n\nx\n");
-  // for(j=0; j<n; j++){
-  //     printf("%lf ", xvec[j]);
-  // }
-  // printf("\n\n");
-  ////////////////////////////////////
-
+  //BiCG Stab
   cgbi_stab(n, adim, bvec, xvec);
 
+  //check x answer
   for(k=0; k<n; k++){
     printf("xvec[%2d] = %lf\n", k, xvec[k]);
   }
+
+  //check b answer
+  check_answer(n, adim, xvec, bvec);
+
 
   free(adim);free(bvec);free(xvec);
 
